@@ -46,10 +46,11 @@
   }
   .card:active{transform:scale(.996)}
   .card .hanzi{
-    font-family:var(--cjk); font-size:clamp(84px,26vw,150px); line-height:1.05;
+    font-family:var(--cjk); font-size:clamp(96px,31vw,168px); line-height:1.05;
     letter-spacing:.06em; color:#fbf6ee; text-shadow:0 2px 24px rgba(226,86,63,.18);
   }
   .card .hanzi.small{font-size:clamp(46px,13vw,74px)}
+  .card .hanzi.pinyinprompt{font-family:var(--ui); font-size:clamp(42px,11vw,64px); color:#fbf6ee; letter-spacing:.02em}
   .card .pinyin{
     font-size:clamp(26px,7.5vw,40px); color:var(--red-soft); margin-top:14px;
     letter-spacing:.04em; font-weight:500;
@@ -519,6 +520,7 @@ function renderQuiz(){
   const promptField = q.mode === 'hanzi' ? 'p' : 'c';
   $('#quizHanzi').textContent = q.d[promptField];
   $('#quizHanzi').classList.toggle('small', q.mode === 'hanzi');
+  $('#quizHanzi').classList.toggle('pinyinprompt', q.mode === 'hanzi');
   $('#quizBadge').textContent = q.mode === 'hanzi' ? 'which character?' :
                                 q.mode === 'meaning' ? 'what does it mean?' : 'which pinyin?';
   $('#quizPrompt').hidden = true;
