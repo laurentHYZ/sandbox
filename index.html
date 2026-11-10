@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14110f">
+<title>汉字 · Pinyin Flashcards</title>
+<style>
+  :root{
+    --bg:#14110f; --panel:#1d1917; --panel-2:#262120; --line:#332b28;
+    --ink:#f2ece4; --muted:#a2938a; --dim:#6f625b;
+    --red:#e2563f; --red-soft:#f08a72; --green:#79b76a; --amber:#e0a63f; --blue:#6f9fd8;
+    --radius:16px;
+    --cjk:"Noto Serif CJK SC","Source Han Serif SC","Songti SC","STSong","SimSun","Noto Sans CJK SC","PingFang SC","Microsoft YaHei",serif;
+    --ui:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, #241d1a 0%, var(--bg) 60%) fixed;
+    color:var(--ink); font-family:var(--ui); display:flex; flex-direction:column;
+    min-height:100dvh; overscroll-behavior:none;
+  }
+  header{padding:14px 16px 6px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+  header h1{margin:0; font-size:17px; letter-spacing:.02em; font-weight:600}
+  header h1 .zh{font-family:var(--cjk); color:var(--red-soft); font-size:19px}
+  header .sub{font-size:12px; color:var(--dim); margin-left:auto}
+  nav{display:flex; gap:6px; padding:8px 14px 0; overflow-x:auto; scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{
+    background:transparent; color:var(--muted); border:1px solid transparent; border-radius:999px;
+    padding:7px 14px; font-size:13px; font-family:var(--ui); cursor:pointer; white-space:nowrap;
+  }
+  nav button[aria-selected="true"]{background:var(--panel-2); color:var(--ink); border-color:var(--line)}
+  main{flex:1; display:flex; flex-direction:column; padding:12px 14px 18px; gap:12px; max-width:760px; width:100%; margin:0 auto}
+  .view{display:none; flex:1; flex-direction:column; gap:12px}
+  .view.active{display:flex}
+
+  /* ---------- card ---------- */
+  .stage{flex:1; display:flex; flex-direction:column; gap:12px; min-height:0}
+  .card{
+    flex:1; min-height:260px; background:linear-gradient(160deg,#221c1a,#1b1715);
+    border:1px solid var(--line); border-radius:var(--radius); position:relative;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:22px 18px; cursor:pointer; user-select:none; overflow:hidden;
+  }
+  .card:active{transform:scale(.996)}
+  .card .hanzi{
+    font-family:var(--cjk); font-size:clamp(84px,26vw,150px); line-height:1.05;
+    letter-spacing:.06em; color:#fbf6ee; text-shadow:0 2px 24px rgba(226,86,63,.18);
+  }
+  .card .hanzi.small{font-size:clamp(46px,13vw,74px)}
+  .card .pinyin{
+    font-size:clamp(26px,7.5vw,40px); color:var(--red-soft); margin-top:14px;
+    letter-spacing:.04em; font-weight:500;
+  }
+  .card .meaning{margin-top:10px; font-size:16px; color:var(--ink); text-align:center; max-width:34ch}
+  .card .meta{margin-top:14px; font-size:11.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.09em}
+  .card .hint{
+    position:absolute; bottom:12px; left:0; right:0; text-align:center;
+    font-size:11.5px; color:var(--dim); letter-spacing:.04em;
+  }
+  .card .badge{
+    position:absolute; top:12px; left:14px; font-size:10.5px; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--dim);
+  }
+  .card .speak{
+    position:absolute; top:10px; right:10px; width:40px; height:40px; border-radius:50%;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--muted);
+    font-size:16px; cursor:pointer; display:grid; place-items:center;
+  }
+  .card .speak:active{background:#332b28}
+
+  .grades{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+  .grades button{
+    padding:13px 6px; border-radius:12px; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); font-family:var(--ui); font-size:14px; cursor:pointer; display:flex;
+    flex-direction:column; gap:3px; align-items:center;
+  }
+  .grades button b{font-weight:600; font-size:14px}
+  .grades button span{font-size:10.5px; color:var(--dim)}
+  .grades button[data-g="0"]{border-color:#5a2b23}
+  .grades button[data-g="0"] b{color:var(--red-soft)}
+  .grades button[data-g="1"] b{color:var(--amber)}
+  .grades button[data-g="2"] b{color:var(--green)}
+  .grades[hidden]{display:none}
+
+  .bar{height:4px; border-radius:2px; background:var(--panel-2); overflow:hidden}
+  .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--red),var(--red-soft)); width:0%; transition:width .25s}
+  .row{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); flex-wrap:wrap}
+  .row .spacer{flex:1}
+
+  .btn{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:12px;
+    padding:11px 16px; font-size:14px; font-family:var(--ui); cursor:pointer;
+  }
+  .btn.primary{background:var(--red); border-color:var(--red); color:#fff; font-weight:600}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45; cursor:default}
+
+  /* ---------- choice / quiz ---------- */
+  .opts{display:grid; gap:8px}
+  .opt{
+    padding:14px 16px; border-radius:12px; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); font-size:17px; font-family:var(--ui); text-align:left; cursor:pointer;
+    display:flex; align-items:center; gap:12px;
+  }
+  .opt .k{font-size:11px; color:var(--dim); border:1px solid var(--line); border-radius:6px; padding:2px 6px; min-width:22px; text-align:center}
+  .opt .zh{font-family:var(--cjk); font-size:26px; letter-spacing:.04em}
+  .opt.right{border-color:var(--green); background:#1e2a1b}
+  .opt.wrong{border-color:var(--red); background:#2c1a17}
+  .opt:disabled{cursor:default; opacity:.85}
+
+  /* ---------- home / browse / stats ---------- */
+  .tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .tile{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .tile .n{font-size:24px; font-weight:600}
+  .tile .l{font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.08em}
+  .start{display:flex; flex-direction:column; gap:8px; margin-top:2px}
+  .start .btn{width:100%; padding:15px}
+  .note{font-size:12.5px; color:var(--muted); line-height:1.55}
+  .note kbd{background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:1px 5px; font-size:11px; font-family:var(--ui)}
+  .chips{display:flex; gap:6px; flex-wrap:wrap}
+  .chip{
+    border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:999px;
+    padding:6px 11px; font-size:12px; cursor:pointer; font-family:var(--ui);
+  }
+  .chip[aria-pressed="true"]{background:var(--red); border-color:var(--red); color:#fff; font-weight:600}
+  input[type=search]{
+    width:100%; padding:11px 13px; border-radius:11px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink); font-size:15px; font-family:var(--ui);
+  }
+  .list{display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex:1; min-height:0; padding-bottom:8px}
+  .item{
+    display:flex; align-items:center; gap:12px; padding:10px 12px; background:var(--panel);
+    border:1px solid var(--line); border-radius:11px; cursor:pointer;
+  }
+  .item .zh{font-family:var(--cjk); font-size:26px; min-width:1.4em; text-align:center}
+  .item .p{color:var(--red-soft); font-size:14px; min-width:5.5em}
+  .item .m{color:var(--muted); font-size:13px; flex:1}
+  .item .b{font-size:10px; color:var(--dim); letter-spacing:.06em}
+  footer{padding:0 14px calc(10px + env(safe-area-inset-bottom)); text-align:center; font-size:11px; color:#4f4540}
+  .empty{color:var(--dim); font-size:13.5px; text-align:center; padding:28px 10px; line-height:1.6}
+  .toast{
+    position:fixed; left:50%; bottom:22px; transform:translate(-50%,20px); background:var(--panel-2);
+    border:1px solid var(--line); color:var(--ink); padding:10px 16px; border-radius:999px; font-size:13px;
+    opacity:0; transition:.22s; pointer-events:none; z-index:50; max-width:88vw; text-align:center;
+  }
+  .toast.show{opacity:1; transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="zh">汉字</span> · Pinyin Flashcards</h1>
+  <span class="sub" id="hdrStat"></span>
+</header>
+
+<nav>
+  <button data-view="home" aria-selected="true">Study</button>
+  <button data-view="quiz" aria-selected="false">Quiz</button>
+  <button data-view="browse" aria-selected="false">Browse</button>
+  <button data-view="stats" aria-selected="false">Progress</button>
+</nav>
+
+<main>
+  <!-- ============ HOME ============ -->
+  <section class="view active" id="view-home">
+    <div class="tiles">
+      <div class="tile"><span class="n" id="tDue">0</span><span class="l">Due now</span></div>
+      <div class="tile"><span class="n" id="tNew">0</span><span class="l">New cards</span></div>
+      <div class="tile"><span class="n" id="tKnown">0</span><span class="l">Learned</span></div>
+      <div class="tile"><span class="n" id="tAcc">–</span><span class="l">Accuracy</span></div>
+    </div>
+    <div class="chips" id="homeChips"></div>
+    <div class="start">
+      <button class="btn primary" id="startStudy">Start studying</button>
+      <button class="btn" id="startQuiz">Quiz me (multiple choice)</button>
+    </div>
+    <p class="note">
+      Tap the card to reveal pinyin and meaning, then grade yourself honestly —
+      <b>Again</b> resets the card, <b>Good</b> moves it up a box, <b>Easy</b> skips ahead.
+      Intervals grow as boxes go up, so cards you know stop coming back so often.
+      <br><br>
+      Keys: <kbd>space</kbd> flip · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> grade · <kbd>s</kbd> speak · <kbd>esc</kbd> home.
+      Progress is saved in this browser.
+    </p>
+  </section>
+
+  <!-- ============ STUDY ============ -->
+  <section class="view" id="view-study">
+    <div class="row">
+      <span id="studyPos">–</span><div class="bar" style="flex:1"><i id="studyBar"></i></div>
+      <span id="studyLeft"></span>
+    </div>
+    <div class="stage">
+      <div class="card" id="studyCard" role="button" tabindex="0" aria-label="Flashcard, tap to flip">
+        <span class="badge" id="studyBadge"></span>
+        <button class="speak" id="studySpeak" title="Pronounce">🔊</button>
+        <div class="hanzi" id="studyHanzi">好</div>
+        <div class="pinyin" id="studyPinyin" hidden>hǎo</div>
+        <div class="meaning" id="studyMeaning" hidden></div>
+        <div class="meta" id="studyMeta" hidden></div>
+        <div class="hint" id="studyHint">tap to reveal</div>
+      </div>
+      <div class="grades" id="grades" hidden>
+        <button data-g="0"><b>Again</b><span>1</span></button>
+        <button data-g="1"><b>Good</b><span>2</span></button>
+        <button data-g="2"><b>Easy</b><span>3</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="view" id="view-quiz">
+    <div class="row">
+      <span id="quizPos">–</span><div class="bar" style="flex:1"><i id="quizBar"></i></div>
+      <span id="quizScore"></span>
+    </div>
+    <div class="stage">
+      <div class="card" id="quizCard" style="cursor:default">
+        <span class="badge" id="quizBadge">pinyin?</span>
+        <button class="speak" id="quizSpeak" title="Pronounce">🔊</button>
+        <div class="hanzi" id="quizHanzi">好</div>
+        <div class="meaning" id="quizPrompt" hidden></div>
+      </div>
+      <div class="opts" id="quizOpts"></div>
+    </div>
+  </section>
+
+  <!-- ============ BROWSE ============ -->
+  <section class="view" id="view-browse">
+    <input type="search" id="q" placeholder="Search character, pinyin, meaning…" autocomplete="off">
+    <div class="row"><span id="browseCount"></span><span class="spacer"></span><span class="note" style="font-size:11.5px">tap a row to hear it</span></div>
+    <div class="list" id="browseList"></div>
+  </section>
+
+  <!-- ============ PROGRESS ============ -->
+  <section class="view" id="view-stats">
+    <div class="tiles" id="statTiles"></div>
+    <div class="row"><b style="color:var(--ink);font-size:13px">Boxes</b><span class="note" style="font-size:11.5px">higher = better known</span></div>
+    <div id="boxChart" class="list" style="overflow:visible"></div>
+    <div class="row" style="gap:8px">
+      <button class="btn ghost" id="resetBtn">Reset progress</button>
+      <button class="btn ghost" id="exportBtn">Export JSON</button>
+    </div>
+    <p class="note" id="statsNote"></p>
+  </section>
+</main>
+
+<footer>汉字 flashcards · <span id="deckSize"></span> cards · offline, saved in this browser</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const DECK = [{"id": 0, "c": "一", "p": "yī", "n": "yi1", "m": "one", "t": "numbers", "len": 1}, {"id": 1, "c": "二", "p": "èr", "n": "er4", "m": "two", "t": "numbers", "len": 1}, {"id": 2, "c": "三", "p": "sān", "n": "san1", "m": "three", "t": "numbers", "len": 1}, {"id": 3, "c": "四", "p": "sì", "n": "si4", "m": "four", "t": "numbers", "len": 1}, {"id": 4, "c": "五", "p": "wǔ", "n": "wu3", "m": "five", "t": "numbers", "len": 1}, {"id": 5, "c": "六", "p": "liù", "n": "liu4", "m": "six", "t": "numbers", "len": 1}, {"id": 6, "c": "七", "p": "qī", "n": "qi1", "m": "seven", "t": "numbers", "len": 1}, {"id": 7, "c": "八", "p": "bā", "n": "ba1", "m": "eight", "t": "numbers", "len": 1}, {"id": 8, "c": "九", "p": "jiǔ", "n": "jiu3", "m": "nine", "t": "numbers", "len": 1}, {"id": 9, "c": "十", "p": "shí", "n": "shi2", "m": "ten", "t": "numbers", "len": 1}, {"id": 10, "c": "百", "p": "bǎi", "n": "bai3", "m": "hundred", "t": "numbers", "len": 1}, {"id": 11, "c": "千", "p": "qiān", "n": "qian1", "m": "thousand", "t": "numbers", "len": 1}, {"id": 12, "c": "万", "p": "wàn", "n": "wan4", "m": "ten thousand", "t": "numbers", "len": 1}, {"id": 13, "c": "零", "p": "líng", "n": "ling2", "m": "zero", "t": "numbers", "len": 1}, {"id": 14, "c": "我", "p": "wǒ", "n": "wo3", "m": "I, me", "t": "pronouns", "len": 1}, {"id": 15, "c": "你", "p": "nǐ", "n": "ni3", "m": "you", "t": "pronouns", "len": 1}, {"id": 16, "c": "他", "p": "tā", "n": "ta1", "m": "he, him", "t": "pronouns", "len": 1}, {"id": 17, "c": "她", "p": "tā", "n": "ta1", "m": "she, her", "t": "pronouns", "len": 1}, {"id": 18, "c": "这", "p": "zhè", "n": "zhe4", "m": "this", "t": "pronouns", "len": 1}, {"id": 19, "c": "那", "p": "nà", "n": "na4", "m": "that", "t": "pronouns", "len": 1}, {"id": 20, "c": "哪", "p": "nǎ", "n": "na3", "m": "which?", "t": "pronouns", "len": 1}, {"id": 21, "c": "谁", "p": "shéi", "n": "shei2", "m": "who?", "t": "pronouns", "len": 1}, {"id": 22, "c": "什么", "p": "shén me", "n": "shen2 me5", "m": "what?", "t": "pronouns", "len": 2}, {"id": 23, "c": "怎么", "p": "zěn me", "n": "zen3 me5", "m": "how?", "t": "pronouns", "len": 2}, {"id": 24, "c": "为什么", "p": "wèi shén me", "n": "wei4 shen2 me5", "m": "why?", "t": "pronouns", "len": 3}, {"id": 25, "c": "多少", "p": "duō shao", "n": "duo1 shao5", "m": "how many/much?", "t": "pronouns", "len": 2}, {"id": 26, "c": "几", "p": "jǐ", "n": "ji3", "m": "how many? (small numbers)", "t": "pronouns", "len": 1}, {"id": 27, "c": "是", "p": "shì", "n": "shi4", "m": "to be", "t": "verbs", "len": 1}, {"id": 28, "c": "有", "p": "yǒu", "n": "you3", "m": "to have", "t": "verbs", "len": 1}, {"id": 29, "c": "在", "p": "zài", "n": "zai4", "m": "to be at, in", "t": "verbs", "len": 1}, {"id": 30, "c": "去", "p": "qù", "n": "qu4", "m": "to go", "t": "verbs", "len": 1}, {"id": 31, "c": "来", "p": "lái", "n": "lai2", "m": "to come", "t": "verbs", "len": 1}, {"id": 32, "c": "吃", "p": "chī", "n": "chi1", "m": "to eat", "t": "verbs", "len": 1}, {"id": 33, "c": "喝", "p": "hē", "n": "he1", "m": "to drink", "t": "verbs", "len": 1}, {"id": 34, "c": "看", "p": "kàn", "n": "kan4", "m": "to look, watch, read", "t": "verbs", "len": 1}, {"id": 35, "c": "听", "p": "tīng", "n": "ting1", "m": "to listen", "t": "verbs", "len": 1}, {"id": 36, "c": "说", "p": "shuō", "n": "shuo1", "m": "to speak", "t": "verbs", "len": 1}, {"id": 37, "c": "读", "p": "dú", "n": "du2", "m": "to read aloud", "t": "verbs", "len": 1}, {"id": 38, "c": "写", "p": "xiě", "n": "xie3", "m": "to write", "t": "verbs", "len": 1}, {"id": 39, "c": "学", "p": "xué", "n": "xue2", "m": "to study, learn", "t": "verbs", "len": 1}, {"id": 40, "c": "买", "p": "mǎi", "n": "mai3", "m": "to buy", "t": "verbs", "len": 1}, {"id": 41, "c": "卖", "p": "mài", "n": "mai4", "m": "to sell", "t": "verbs", "len": 1}, {"id": 42, "c": "想", "p": "xiǎng", "n": "xiang3", "m": "to want, to think", "t": "verbs", "len": 1}, {"id": 43, "c": "要", "p": "yào", "n": "yao4", "m": "to want, need", "t": "verbs", "len": 1}, {"id": 44, "c": "会", "p": "huì", "n": "hui4", "m": "can, to know how", "t": "verbs", "len": 1}, {"id": 45, "c": "能", "p": "néng", "n": "neng2", "m": "to be able to", "t": "verbs", "len": 1}, {"id": 46, "c": "做", "p": "zuò", "n": "zuo4", "m": "to do, make", "t": "verbs", "len": 1}, {"id": 47, "c": "走", "p": "zǒu", "n": "zou3", "m": "to walk", "t": "verbs", "len": 1}, {"id": 48, "c": "跑", "p": "pǎo", "n": "pao3", "m": "to run", "t": "verbs", "len": 1}, {"id": 49, "c": "睡", "p": "shuì", "n": "shui4", "m": "to sleep", "t": "verbs", "len": 1}, {"id": 50, "c": "坐", "p": "zuò", "n": "zuo4", "m": "to sit", "t": "verbs", "len": 1}, {"id": 51, "c": "站", "p": "zhàn", "n": "zhan4", "m": "to stand; station", "t": "verbs", "len": 1}, {"id": 52, "c": "开", "p": "kāi", "n": "kai1", "m": "to open; to drive", "t": "verbs", "len": 1}, {"id": 53, "c": "关", "p": "guān", "n": "guan1", "m": "to close", "t": "verbs", "len": 1}, {"id": 54, "c": "给", "p": "gěi", "n": "gei3", "m": "to give", "t": "verbs", "len": 1}, {"id": 55, "c": "找", "p": "zhǎo", "n": "zhao3", "m": "to look for", "t": "verbs", "len": 1}, {"id": 56, "c": "帮", "p": "bāng", "n": "bang1", "m": "to help", "t": "verbs", "len": 1}, {"id": 57, "c": "住", "p": "zhù", "n": "zhu4", "m": "to live, reside", "t": "verbs", "len": 1}, {"id": 58, "c": "用", "p": "yòng", "n": "yong4", "m": "to use", "t": "verbs", "len": 1}, {"id": 59, "c": "认识", "p": "rèn shi", "n": "ren4 shi5", "m": "to know (a person)", "t": "verbs", "len": 2}, {"id": 60, "c": "人", "p": "rén", "n": "ren2", "m": "person", "t": "people", "len": 1}, {"id": 61, "c": "朋友", "p": "péng you", "n": "peng2 you5", "m": "friend", "t": "people", "len": 2}, {"id": 62, "c": "老师", "p": "lǎo shī", "n": "lao3 shi1", "m": "teacher", "t": "people", "len": 2}, {"id": 63, "c": "学生", "p": "xué sheng", "n": "xue2 sheng5", "m": "student", "t": "people", "len": 2}, {"id": 64, "c": "医生", "p": "yī shēng", "n": "yi1 sheng1", "m": "doctor", "t": "people", "len": 2}, {"id": 65, "c": "孩子", "p": "hái zi", "n": "hai2 zi5", "m": "child", "t": "people", "len": 2}, {"id": 66, "c": "妈妈", "p": "mā ma", "n": "ma1 ma5", "m": "mother", "t": "people", "len": 2}, {"id": 67, "c": "爸爸", "p": "bà ba", "n": "ba4 ba5", "m": "father", "t": "people", "len": 2}, {"id": 68, "c": "天", "p": "tiān", "n": "tian1", "m": "sky, day", "t": "world", "len": 1}, {"id": 69, "c": "地", "p": "dì", "n": "di4", "m": "earth, ground", "t": "world", "len": 1}, {"id": 70, "c": "水", "p": "shuǐ", "n": "shui3", "m": "water", "t": "world", "len": 1}, {"id": 71, "c": "火", "p": "huǒ", "n": "huo3", "m": "fire", "t": "world", "len": 1}, {"id": 72, "c": "山", "p": "shān", "n": "shan1", "m": "mountain", "t": "world", "len": 1}, {"id": 73, "c": "木", "p": "mù", "n": "mu4", "m": "tree, wood", "t": "world", "len": 1}, {"id": 74, "c": "金", "p": "jīn", "n": "jin1", "m": "gold, metal", "t": "world", "len": 1}, {"id": 75, "c": "土", "p": "tǔ", "n": "tu3", "m": "soil, earth", "t": "world", "len": 1}, {"id": 76, "c": "日", "p": "rì", "n": "ri4", "m": "sun; day", "t": "world", "len": 1}, {"id": 77, "c": "月", "p": "yuè", "n": "yue4", "m": "moon; month", "t": "world", "len": 1}, {"id": 78, "c": "年", "p": "nián", "n": "nian2", "m": "year", "t": "world", "len": 1}, {"id": 79, "c": "雨", "p": "yǔ", "n": "yu3", "m": "rain", "t": "world", "len": 1}, {"id": 80, "c": "风", "p": "fēng", "n": "feng1", "m": "wind", "t": "world", "len": 1}, {"id": 81, "c": "家", "p": "jiā", "n": "jia1", "m": "home, family", "t": "places", "len": 1}, {"id": 82, "c": "国", "p": "guó", "n": "guo2", "m": "country", "t": "places", "len": 1}, {"id": 83, "c": "学校", "p": "xué xiào", "n": "xue2 xiao4", "m": "school", "t": "places", "len": 2}, {"id": 84, "c": "商店", "p": "shāng diàn", "n": "shang1 dian4", "m": "shop", "t": "places", "len": 2}, {"id": 85, "c": "饭馆", "p": "fàn guǎn", "n": "fan4 guan3", "m": "restaurant", "t": "places", "len": 2}, {"id": 86, "c": "医院", "p": "yī yuàn", "n": "yi1 yuan4", "m": "hospital", "t": "places", "len": 2}, {"id": 87, "c": "路", "p": "lù", "n": "lu4", "m": "road, way", "t": "places", "len": 1}, {"id": 88, "c": "门", "p": "mén", "n": "men2", "m": "door, gate", "t": "places", "len": 1}, {"id": 89, "c": "车", "p": "chē", "n": "che1", "m": "vehicle, car", "t": "objects", "len": 1}, {"id": 90, "c": "书", "p": "shū", "n": "shu1", "m": "book", "t": "objects", "len": 1}, {"id": 91, "c": "字", "p": "zì", "n": "zi4", "m": "written character", "t": "objects", "len": 1}, {"id": 92, "c": "钱", "p": "qián", "n": "qian2", "m": "money", "t": "objects", "len": 1}, {"id": 93, "c": "电脑", "p": "diàn nǎo", "n": "dian4 nao3", "m": "computer", "t": "objects", "len": 2}, {"id": 94, "c": "电话", "p": "diàn huà", "n": "dian4 hua4", "m": "telephone", "t": "objects", "len": 2}, {"id": 95, "c": "手机", "p": "shǒu jī", "n": "shou3 ji1", "m": "mobile phone", "t": "objects", "len": 2}, {"id": 96, "c": "衣服", "p": "yī fu", "n": "yi1 fu5", "m": "clothes", "t": "objects", "len": 2}, {"id": 97, "c": "今天", "p": "jīn tiān", "n": "jin1 tian1", "m": "today", "t": "time", "len": 2}, {"id": 98, "c": "明天", "p": "míng tiān", "n": "ming2 tian1", "m": "tomorrow", "t": "time", "len": 2}, {"id": 99, "c": "昨天", "p": "zuó tiān", "n": "zuo2 tian1", "m": "yesterday", "t": "time", "len": 2}, {"id": 100, "c": "早上", "p": "zǎo shang", "n": "zao3 shang5", "m": "morning", "t": "time", "len": 2}, {"id": 101, "c": "晚上", "p": "wǎn shang", "n": "wan3 shang5", "m": "evening, night", "t": "time", "len": 2}, {"id": 102, "c": "现在", "p": "xiàn zài", "n": "xian4 zai4", "m": "now", "t": "time", "len": 2}, {"id": 103, "c": "时候", "p": "shí hou", "n": "shi2 hou5", "m": "time, moment", "t": "time", "len": 2}, {"id": 104, "c": "星期", "p": "xīng qī", "n": "xing1 qi1", "m": "week", "t": "time", "len": 2}, {"id": 105, "c": "饭", "p": "fàn", "n": "fan4", "m": "cooked rice, meal", "t": "food", "len": 1}, {"id": 106, "c": "菜", "p": "cài", "n": "cai4", "m": "dish, vegetable", "t": "food", "len": 1}, {"id": 107, "c": "茶", "p": "chá", "n": "cha2", "m": "tea", "t": "food", "len": 1}, {"id": 108, "c": "咖啡", "p": "kā fēi", "n": "ka1 fei1", "m": "coffee", "t": "food", "len": 2}, {"id": 109, "c": "面条", "p": "miàn tiáo", "n": "mian4 tiao2", "m": "noodles", "t": "food", "len": 2}, {"id": 110, "c": "肉", "p": "ròu", "n": "rou4", "m": "meat", "t": "food", "len": 1}, {"id": 111, "c": "鱼", "p": "yú", "n": "yu2", "m": "fish", "t": "food", "len": 1}, {"id": 112, "c": "鸡蛋", "p": "jī dàn", "n": "ji1 dan4", "m": "egg", "t": "food", "len": 2}, {"id": 113, "c": "苹果", "p": "píng guǒ", "n": "ping2 guo3", "m": "apple", "t": "food", "len": 2}, {"id": 114, "c": "西瓜", "p": "xī guā", "n": "xi1 gua1", "m": "watermelon", "t": "food", "len": 2}, {"id": 115, "c": "啤酒", "p": "pí jiǔ", "n": "pi2 jiu3", "m": "beer", "t": "food", "len": 2}, {"id": 116, "c": "大", "p": "dà", "n": "da4", "m": "big", "t": "adjectives", "len": 1}, {"id": 117, "c": "小", "p": "xiǎo", "n": "xiao3", "m": "small", "t": "adjectives", "len": 1}, {"id": 118, "c": "多", "p": "duō", "n": "duo1", "m": "many, much", "t": "adjectives", "len": 1}, {"id": 119, "c": "少", "p": "shǎo", "n": "shao3", "m": "few, little", "t": "adjectives", "len": 1}, {"id": 120, "c": "好", "p": "hǎo", "n": "hao3", "m": "good", "t": "adjectives", "len": 1}, {"id": 121, "c": "坏", "p": "huài", "n": "huai4", "m": "bad", "t": "adjectives", "len": 1}, {"id": 122, "c": "新", "p": "xīn", "n": "xin1", "m": "new", "t": "adjectives", "len": 1}, {"id": 123, "c": "旧", "p": "jiù", "n": "jiu4", "m": "old (of things)", "t": "adjectives", "len": 1}, {"id": 124, "c": "高", "p": "gāo", "n": "gao1", "m": "tall, high", "t": "adjectives", "len": 1}, {"id": 125, "c": "矮", "p": "ǎi", "n": "ai3", "m": "short (of height)", "t": "adjectives", "len": 1}, {"id": 126, "c": "长", "p": "cháng", "n": "chang2", "m": "long", "t": "adjectives", "len": 1}, {"id": 127, "c": "短", "p": "duǎn", "n": "duan3", "m": "short (of length)", "t": "adjectives", "len": 1}, {"id": 128, "c": "快", "p": "kuài", "n": "kuai4", "m": "fast", "t": "adjectives", "len": 1}, {"id": 129, "c": "慢", "p": "màn", "n": "man4", "m": "slow", "t": "adjectives", "len": 1}, {"id": 130, "c": "热", "p": "rè", "n": "re4", "m": "hot", "t": "adjectives", "len": 1}, {"id": 131, "c": "冷", "p": "lěng", "n": "leng3", "m": "cold", "t": "adjectives", "len": 1}, {"id": 132, "c": "贵", "p": "guì", "n": "gui4", "m": "expensive", "t": "adjectives", "len": 1}, {"id": 133, "c": "便宜", "p": "pián yi", "n": "pian2 yi5", "m": "cheap", "t": "adjectives", "len": 2}, {"id": 134, "c": "好吃", "p": "hǎo chī", "n": "hao3 chi1", "m": "tasty", "t": "adjectives", "len": 2}, {"id": 135, "c": "漂亮", "p": "piào liang", "n": "piao4 liang5", "m": "pretty", "t": "adjectives", "len": 2}, {"id": 136, "c": "难", "p": "nán", "n": "nan2", "m": "difficult", "t": "adjectives", "len": 1}, {"id": 137, "c": "容易", "p": "róng yì", "n": "rong2 yi4", "m": "easy", "t": "adjectives", "len": 2}, {"id": 138, "c": "对", "p": "duì", "n": "dui4", "m": "correct; towards", "t": "adjectives", "len": 1}, {"id": 139, "c": "错", "p": "cuò", "n": "cuo4", "m": "wrong", "t": "adjectives", "len": 1}, {"id": 140, "c": "忙", "p": "máng", "n": "mang2", "m": "busy", "t": "adjectives", "len": 1}, {"id": 141, "c": "不", "p": "bù", "n": "bu4", "m": "not", "t": "grammar", "len": 1}, {"id": 142, "c": "很", "p": "hěn", "n": "hen3", "m": "very", "t": "grammar", "len": 1}, {"id": 143, "c": "也", "p": "yě", "n": "ye3", "m": "also", "t": "grammar", "len": 1}, {"id": 144, "c": "都", "p": "dōu", "n": "dou1", "m": "all, both", "t": "grammar", "len": 1}, {"id": 145, "c": "和", "p": "hé", "n": "he2", "m": "and, with", "t": "grammar", "len": 1}, {"id": 146, "c": "但是", "p": "dàn shì", "n": "dan4 shi4", "m": "but, however", "t": "grammar", "len": 2}, {"id": 147, "c": "因为", "p": "yīn wèi", "n": "yin1 wei4", "m": "because", "t": "grammar", "len": 2}, {"id": 148, "c": "所以", "p": "suǒ yǐ", "n": "suo3 yi3", "m": "therefore", "t": "grammar", "len": 2}, {"id": 149, "c": "请", "p": "qǐng", "n": "qing3", "m": "please", "t": "grammar", "len": 1}, {"id": 150, "c": "吗", "p": "ma", "n": "ma5", "m": "question particle", "t": "grammar", "len": 1}, {"id": 151, "c": "呢", "p": "ne", "n": "ne5", "m": "and you? (particle)", "t": "grammar", "len": 1}, {"id": 152, "c": "个", "p": "gè", "n": "ge4", "m": "general measure word", "t": "grammar", "len": 1}, {"id": 153, "c": "本", "p": "běn", "n": "ben3", "m": "measure word for books", "t": "grammar", "len": 1}, {"id": 154, "c": "杯", "p": "bēi", "n": "bei1", "m": "cup (measure word)", "t": "grammar", "len": 1}, {"id": 155, "c": "块", "p": "kuài", "n": "kuai4", "m": "piece; yuan (money)", "t": "grammar", "len": 1}];
+const CATS = ["adjectives", "food", "grammar", "numbers", "objects", "people", "places", "pronouns", "time", "verbs", "world"];
+
+// ---------- storage ----------
+const KEY = 'hanzi-flashcards.v1';
+const BOX_MS = [0, 10*60e3, 24*3600e3, 3*24*3600e3, 7*24*3600e3, 21*24*3600e3, 60*24*3600e3];
+const BOX_LABEL = ['new','10 min','1 day','3 days','1 week','3 weeks','2 months'];
+
+const defaults = () => ({
+  cards: {},                 // id -> {box, due, seen, right, wrong}
+  cats: [],                  // active category filter ([] = all)
+  quizMode: 'pinyin',        // registered below
+  streak: {last:null, days:0},
+});
+let S = load();
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return defaults();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaults(), parsed);
+  }catch(e){ return defaults(); }
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save progress (storage blocked)'); }
+}
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const now = () => Date.now();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const byId = id => DECK.find(d => d.id === id);
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function rec(id){
+  if(!S.cards[id]) S.cards[id] = {box:0, due:0, seen:0, right:0, wrong:0};
+  return S.cards[id];
+}
+function activeDeck(){
+  if(!S.cats.length) return DECK;
+  return DECK.filter(d => S.cats.includes(d.t));
+}
+function counts(){
+  const deck = activeDeck(); const t = now();
+  let due=0, fresh=0, learned=0;
+  for(const d of deck){
+    const r = S.cards[d.id];
+    if(!r || !r.seen) fresh++;
+    else { learned++; if(r.due <= t) due++; }
+  }
+  return {due, fresh, learned, total: deck.length};
+}
+let toastTimer;
+function toast(msg){
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove('show'), 2000);
+}
+
+// ---------- speech ----------
+let zhVoice = null;
+function pickVoice(){
+  if(!('speechSynthesis' in window)) return;
+  const vs = speechSynthesis.getVoices();
+  zhVoice = vs.find(v => /^zh(-|_)?(CN|Hans)?/i.test(v.lang)) ||
+            vs.find(v => /chinese|中文|普通话|普通話/i.test(v.name)) || null;
+}
+if('speechSynthesis' in window){
+  pickVoice();
+  speechSynthesis.addEventListener?.('voiceschanged', pickVoice);
+  setTimeout(pickVoice, 400);
+}
+function speak(text){
+  if(!('speechSynthesis' in window)){ toast('This browser has no speech synthesis'); return; }
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN'; u.rate = 0.82;
+    if(zhVoice) u.voice = zhVoice;
+    speechSynthesis.speak(u);
+  }catch(e){ toast('Speech unavailable'); }
+}
+
+// ---------- navigation ----------
+function show(view){
+  $$('nav button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === view)));
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
+  if(view === 'home') renderHome();
+  if(view === 'browse') renderBrowse();
+  if(view === 'stats') renderStats();
+  if(view === 'study' && !session.queue.length) startStudy();
+  if(view === 'quiz' && !quiz.items.length) startQuiz();
+}
+$$('nav button').forEach(b => b.onclick = () => show(b.dataset.view));
+
+// ---------- home ----------
+function renderHome(){
+  const c = counts();
+  $('#tDue').textContent = c.due;
+  $('#tNew').textContent = c.fresh;
+  $('#tKnown').textContent = c.learned;
+  const seen = Object.values(S.cards).filter(r => r.seen);
+  const right = seen.reduce((a,r)=>a+r.right,0), wrong = seen.reduce((a,r)=>a+r.wrong,0);
+  $('#tAcc').textContent = (right+wrong) ? Math.round(100*right/(right+wrong)) + '%' : '–';
+  $('#hdrStat').textContent = `${c.total} cards`;
+  const chips = $('#homeChips');
+  chips.innerHTML = '';
+  const all = document.createElement('button');
+  all.className = 'chip'; all.textContent = 'all';
+  all.setAttribute('aria-pressed', String(!S.cats.length));
+  all.onclick = () => { S.cats = []; save(); renderHome(); };
+  chips.appendChild(all);
+  for(const cat of CATS){
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = cat;
+    b.setAttribute('aria-pressed', String(S.cats.includes(cat)));
+    b.onclick = () => {
+      S.cats = S.cats.includes(cat) ? S.cats.filter(x=>x!==cat) : [...S.cats, cat];
+      save(); renderHome();
+    };
+    chips.appendChild(b);
+  }
+}
+$('#startStudy').onclick = () => { show('study'); startStudy(); };
+$('#startQuiz').onclick = () => { show('quiz'); startQuiz(); };
+
+// ---------- study (Leitner) ----------
+const session = {queue: [], i: 0, done: 0, total: 0, flipped: false, current: null};
+const SESSION_MAX = 20;
+
+function startStudy(){
+  const t = now();
+  const deck = activeDeck();
+  const due = deck.filter(d => { const r = S.cards[d.id]; return r && r.seen && r.due <= t; });
+  const fresh = deck.filter(d => !S.cards[d.id] || !S.cards[d.id].seen);
+  // due first (most overdue first), then new cards, capped
+  due.sort((a,b) => (S.cards[a.id].due - S.cards[b.id].due));
+  let queue = [...due, ...fresh].slice(0, SESSION_MAX);
+  if(!queue.length){
+    // nothing due: offer the soonest-scheduled cards instead of a dead end
+    const soon = deck.filter(d => S.cards[d.id] && S.cards[d.id].seen)
+                     .sort((a,b) => S.cards[a.id].due - S.cards[b.id].due).slice(0, 10);
+    if(soon.length){
+      queue = soon.map(d => d.id);
+      toast('Nothing due — reviewing the soonest cards');
+    }
+  }
+  session.queue = queue.map(d => d.id !== undefined ? d.id : d);
+  session.i = 0; session.done = 0; session.total = session.queue.length; session.flipped = false;
+  if(!session.queue.length){ renderStudyEmpty(); return; }
+  renderStudy();
+}
+
+function renderStudyEmpty(){
+  $('#studyPos').textContent = '—';
+  $('#studyBar').style.width = '0%';
+  $('#studyLeft').textContent = '';
+  $('#studyHanzi').textContent = '✓';
+  $('#studyHanzi').classList.add('small');
+  $('#studyPinyin').hidden = true; $('#studyMeaning').hidden = true; $('#studyMeta').hidden = true;
+  $('#studyHint').textContent = 'no cards selected';
+  $('#grades').hidden = true;
+  $('#studyBadge').textContent = '';
+}
+
+function renderStudy(){
+  if(session.i >= session.queue.length){ return renderStudyDone(); }
+  const d = byId(session.queue[session.i]);
+  session.current = d; session.flipped = false;
+  $('#studyHanzi').textContent = d.c;
+  $('#studyHanzi').classList.toggle('small', d.len > 1);
+  $('#studyPinyin').textContent = d.p;
+  $('#studyMeaning').textContent = d.m;
+  $('#studyMeta').textContent = d.t + ' · box ' + (S.cards[d.id] ? S.cards[d.id].box : 0);
+  $('#studyPinyin').hidden = true; $('#studyMeaning').hidden = true; $('#studyMeta').hidden = true;
+  $('#studyBadge').textContent = (S.cards[d.id] && S.cards[d.id].seen) ? 'review' : 'new';
+  $('#studyHint').textContent = 'tap to reveal';
+  $('#grades').hidden = true;
+  $('#studyPos').textContent = (session.done + 1) + ' / ' + session.total;
+  $('#studyBar').style.width = (100 * session.done / Math.max(1, session.total)) + '%';
+  const left = session.queue.length - session.i;
+  $('#studyLeft').textContent = left + ' left';
+}
+
+function flipStudy(){
+  if(!session.current || session.flipped) return;
+  session.flipped = true;
+  $('#studyPinyin').hidden = false;
+  $('#studyMeaning').hidden = false;
+  $('#studyMeta').hidden = false;
+  $('#studyHint').textContent = 'how well did you know it?';
+  $('#grades').hidden = false;
+}
+
+function gradeStudy(g){
+  if(!session.flipped || !session.current) return;
+  const d = session.current, r = rec(d.id);
+  r.seen++;
+  if(g === 0){ r.wrong++; r.box = 0; r.due = now(); }
+  else { r.right++; r.box = Math.min(6, r.box + (g === 2 ? 2 : 1)); r.due = now() + BOX_MS[r.box]; }
+  save();
+  if(g === 0) session.queue.push(d.id);       // come back this session
+  session.done++;
+  session.i++;
+  renderStudy();
+}
+
+function renderStudyDone(){
+  const c = counts();
+  $('#studyPos').textContent = 'done';
+  $('#studyBar').style.width = '100%';
+  $('#studyLeft').textContent = '';
+  $('#studyHanzi').textContent = '好';
+  $('#studyHanzi').classList.add('small');
+  $('#studyPinyin').hidden = false;
+  $('#studyPinyin').textContent = 'hǎo';
+  $('#studyMeaning').hidden = false;
+  $('#studyMeaning').textContent = 'good — session complete';
+  $('#studyMeta').hidden = true;
+  $('#studyBadge').textContent = '';
+  $('#studyHint').textContent = `${c.due} due now · ${c.learned}/${c.total} learned`;
+  $('#grades').hidden = true;
+  session.current = null;
+}
+
+$('#studyCard').onclick = e => { if(e.target.closest('.speak')) return; flipStudy(); };
+$('#studyCard').onkeydown = e => { if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); flipStudy(); } };
+$('#studySpeak').onclick = e => { e.stopPropagation(); if(session.current) speak(session.current.c); };
+$$('#grades button').forEach(b => b.onclick = () => gradeStudy(+b.dataset.g));
+
+// ---------- quiz ----------
+const QUIZ_MODES = {pinyin: 'character → pinyin', meaning: 'character → meaning', hanzi: 'pinyin → character'};
+const quiz = {items: [], i: 0, score: 0, answered: false, mode: 'pinyin'};
+
+function startQuiz(){
+  let pool = activeDeck().filter(d => d.len === 1);
+  if(pool.length < 8) pool = activeDeck();
+  if(!pool.length){ toast('No cards in this selection'); return; }
+  // prefer cards already introduced, then fill with new ones
+  const seen = pool.filter(d => S.cards[d.id] && S.cards[d.id].seen);
+  const fresh = pool.filter(d => !(S.cards[d.id] && S.cards[d.id].seen));
+  const picks = shuffle([...shuffle([...seen]), ...shuffle([...fresh])]).slice(0, 10);
+  quiz.items = picks.map(d => makeQuestion(d, pool));
+  quiz.i = 0; quiz.score = 0; quiz.answered = false; quiz.mode = S.quizMode || 'pinyin';
+  renderQuiz();
+}
+
+function makeQuestion(d, pool){
+  const modes = Object.keys(QUIZ_MODES);
+  const mode = modes[Math.floor(Math.random()*modes.length)];
+  const field = mode === 'hanzi' ? 'c' : mode === 'meaning' ? 'm' : 'p';
+  const opts = new Set([d[field]]);
+  const near = shuffle(pool.filter(x => x.id !== d.id));
+  for(const x of near){ if(opts.size >= 4) break; opts.add(x[field]); }
+  return {d, mode, answer: d[field], opts: shuffle([...opts])};
+}
+
+function renderQuiz(){
+  if(quiz.i >= quiz.items.length) return renderQuizDone();
+  const q = quiz.items[quiz.i];
+  quiz.answered = false;
+  const promptField = q.mode === 'hanzi' ? 'p' : 'c';
+  $('#quizHanzi').textContent = q.d[promptField];
+  $('#quizHanzi').classList.toggle('small', q.mode === 'hanzi');
+  $('#quizBadge').textContent = q.mode === 'hanzi' ? 'which character?' :
+                                q.mode === 'meaning' ? 'what does it mean?' : 'which pinyin?';
+  $('#quizPrompt').hidden = true;
+  $('#quizPos').textContent = (quiz.i + 1) + ' / ' + quiz.items.length;
+  $('#quizBar').style.width = (100 * quiz.i / quiz.items.length) + '%';
+  $('#quizScore').textContent = quiz.score + ' correct';
+  const box = $('#quizOpts'); box.innerHTML = '';
+  q.opts.forEach((opt, idx) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = `<span class="k">${idx+1}</span>` +
+      (q.mode === 'hanzi' ? `<span class="zh">${esc(opt)}</span>` : `<span>${esc(opt)}</span>`);
+    b.onclick = () => answerQuiz(b, opt);
+    box.appendChild(b);
+  });
+}
+
+function answerQuiz(btn, opt){
+  if(quiz.answered) return;
+  quiz.answered = true;
+  const q = quiz.items[quiz.i];
+  const correct = opt === q.answer;
+  const r = rec(q.d.id);
+  r.seen++;
+  if(correct){ quiz.score++; r.right++; r.box = Math.min(6, r.box + 1); r.due = now() + BOX_MS[r.box]; }
+  else { r.wrong++; r.box = 0; r.due = now(); }
+  save();
+  $('#quizScore').textContent = quiz.score + ' correct';
+  $$('#quizOpts .opt').forEach(b => {
+    b.disabled = true;
+    const label = b.textContent.replace(/^\d\s*/, '').trim();
+    if(label === q.answer) b.classList.add('right');
+    else if(b === btn) b.classList.add('wrong');
+  });
+  if(q.mode !== 'hanzi') $('#quizPrompt').hidden = false;
+  $('#quizPrompt').textContent = `${q.d.c} · ${q.d.p} · ${q.d.m}`;
+  $('#quizPrompt').hidden = false;
+  speakIfOn(q.d.c);
+  const wasCorrect = correct;
+  setTimeout(() => {
+    quiz.i++;
+    renderQuiz();
+    if(!wasCorrect) { /* stays in queue via next quiz round */ }
+  }, wasCorrect ? 700 : 1500);
+}
+
+function speakIfOn(){ /* audio is explicit only — avoids noise on every answer */ }
+
+function renderQuizDone(){
+  $('#quizPos').textContent = 'done';
+  $('#quizBar').style.width = '100%';
+  $('#quizScore').textContent = quiz.score + ' correct';
+  $('#quizHanzi').textContent = '✓';
+  $('#quizHanzi').classList.add('small');
+  $('#quizBadge').textContent = 'quiz complete';
+  $('#quizOpts').innerHTML = `<div class="empty">${quiz.score} / ${quiz.items.length} correct.
+    <br><br><button class="btn primary" id="quizAgain">Another round</button></div>`;
+  const b = $('#quizAgain'); if(b) b.onclick = startQuiz;
+}
+$('#quizSpeak').onclick = e => { e.stopPropagation(); if(quiz.items[quiz.i]) speak(quiz.items[quiz.i].d.c); };
+
+// ---------- browse ----------
+function renderBrowse(){
+  $('#deckSize').textContent = DECK.length;
+  const q = ($('#q').value || '').trim().toLowerCase();
+  // ignore tone marks and spaces when searching: "pengyou" finds "péng you"
+  const strip = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+  const qn = strip(q);
+  const rows = DECK.filter(d => {
+    if(!q) return true;
+    const hay = (d.c + ' ' + d.p + ' ' + d.n + ' ' + d.m + ' ' + d.t).toLowerCase();
+    return hay.includes(q) || strip(hay).includes(qn);
+  });
+  $('#browseCount').textContent = rows.length + ' of ' + DECK.length;
+  const list = $('#browseList'); list.innerHTML = '';
+  for(const d of rows){
+    const r = S.cards[d.id];
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `<span class="zh">${esc(d.c)}</span><span class="p">${esc(d.p)}</span>
+      <span class="m">${esc(d.m)}</span><span class="b">${r && r.seen ? 'box ' + r.box : 'new'}</span>`;
+    el.onclick = () => speak(d.c);
+    list.appendChild(el);
+  }
+  if(!rows.length) list.innerHTML = '<div class="empty">Nothing matches that.</div>';
+}
+$('#q').oninput = renderBrowse;
+
+// ---------- stats ----------
+function renderStats(){
+  const c = counts();
+  const vals = Object.values(S.cards).filter(r => r.seen);
+  const right = vals.reduce((a,r)=>a+r.right,0), wrong = vals.reduce((a,r)=>a+r.wrong,0);
+  const boxCounts = [0,0,0,0,0,0,0];
+  for(const r of vals) boxCounts[r.box] = (boxCounts[r.box]||0) + 1;
+  $('#statTiles').innerHTML = `
+    <div class="tile"><span class="n">${c.learned}</span><span class="l">learned</span></div>
+    <div class="tile"><span class="n">${c.total - c.learned}</span><span class="l">untouched</span></div>
+    <div class="tile"><span class="n">${right + wrong ? Math.round(100*right/(right+wrong)) + '%' : '–'}</span><span class="l">accuracy</span></div>
+    <div class="tile"><span class="n">${right + wrong}</span><span class="l">reviews</span></div>`;
+  const max = Math.max(1, ...boxCounts);
+  $('#boxChart').innerHTML = boxCounts.map((n,i) => `
+    <div class="row" style="gap:10px">
+      <span style="width:70px;color:var(--muted);font-size:12px">${BOX_LABEL[i]}</span>
+      <div class="bar" style="flex:1"><i style="width:${100*n/max}%;background:${i>=4?'var(--green)':'var(--red)'}"></i></div>
+      <span style="width:26px;text-align:right;font-size:12px">${n}</span>
+    </div>`).join('');
+  $('#statsNote').textContent = 'Interval per box: ' + BOX_LABEL.slice(1).join(' → ') + '.';
+}
+$('#resetBtn').onclick = () => {
+  if(confirm('Erase all flashcard progress in this browser?')){
+    S.cards = {}; save(); renderStats(); renderHome(); toast('Progress reset');
+  }
+};
+$('#exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'hanzi-progress.json';
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+};
+
+// ---------- keyboard ----------
+document.addEventListener('keydown', e => {
+  if(e.target.matches('input, textarea')) return;
+  const inStudy = $('#view-study').classList.contains('active');
+  const inQuiz = $('#view-quiz').classList.contains('active');
+  if(e.key === 'Escape'){ show('home'); return; }
+  if(inStudy){
+    if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); session.flipped ? gradeStudy(1) : flipStudy(); }
+    else if(session.flipped && ['1','2','3'].includes(e.key)) gradeStudy(+e.key - 1);
+    else if(e.key.toLowerCase() === 's' && session.current) speak(session.current.c);
+  } else if(inQuiz){
+    if(['1','2','3','4'].includes(e.key)){
+      const b = $$('#quizOpts .opt')[+e.key - 1]; if(b && !b.disabled) b.click();
+    } else if(e.key.toLowerCase() === 's' && quiz.items[quiz.i]) speak(quiz.items[quiz.i].d.c);
+  }
+});
+
+// ---------- boot ----------
+$('#deckSize').textContent = DECK.length;
+renderHome();
+</script>
+</body>
+</html>

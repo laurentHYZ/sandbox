@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14110f">
+<title>汉字 · Pinyin Flashcards</title>
+<style>
+  :root{
+    --bg:#14110f; --panel:#1d1917; --panel-2:#262120; --line:#332b28;
+    --ink:#f2ece4; --muted:#a2938a; --dim:#6f625b;
+    --red:#e2563f; --red-soft:#f08a72; --green:#79b76a; --amber:#e0a63f; --blue:#6f9fd8;
+    --radius:16px;
+    --cjk:"Noto Serif CJK SC","Source Han Serif SC","Songti SC","STSong","SimSun","Noto Sans CJK SC","PingFang SC","Microsoft YaHei",serif;
+    --ui:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(1200px 600px at 50% -10%, #241d1a 0%, var(--bg) 60%) fixed;
+    color:var(--ink); font-family:var(--ui); display:flex; flex-direction:column;
+    min-height:100dvh; overscroll-behavior:none;
+  }
+  header{padding:14px 16px 6px; display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+  header h1{margin:0; font-size:17px; letter-spacing:.02em; font-weight:600}
+  header h1 .zh{font-family:var(--cjk); color:var(--red-soft); font-size:19px}
+  header .sub{font-size:12px; color:var(--dim); margin-left:auto}
+  nav{display:flex; gap:6px; padding:8px 14px 0; overflow-x:auto; scrollbar-width:none}
+  nav::-webkit-scrollbar{display:none}
+  nav button{
+    background:transparent; color:var(--muted); border:1px solid transparent; border-radius:999px;
+    padding:7px 14px; font-size:13px; font-family:var(--ui); cursor:pointer; white-space:nowrap;
+  }
+  nav button[aria-selected="true"]{background:var(--panel-2); color:var(--ink); border-color:var(--line)}
+  main{flex:1; display:flex; flex-direction:column; padding:12px 14px 18px; gap:12px; max-width:760px; width:100%; margin:0 auto}
+  .view{display:none; flex:1; flex-direction:column; gap:12px}
+  .view.active{display:flex}
+
+  /* ---------- card ---------- */
+  .stage{flex:1; display:flex; flex-direction:column; gap:12px; min-height:0}
+  .card{
+    flex:1; min-height:260px; background:linear-gradient(160deg,#221c1a,#1b1715);
+    border:1px solid var(--line); border-radius:var(--radius); position:relative;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:22px 18px; cursor:pointer; user-select:none; overflow:hidden;
+  }
+  .card:active{transform:scale(.996)}
+  .card .hanzi{
+    font-family:var(--cjk); font-size:clamp(84px,26vw,150px); line-height:1.05;
+    letter-spacing:.06em; color:#fbf6ee; text-shadow:0 2px 24px rgba(226,86,63,.18);
+  }
+  .card .hanzi.small{font-size:clamp(46px,13vw,74px)}
+  .card .pinyin{
+    font-size:clamp(26px,7.5vw,40px); color:var(--red-soft); margin-top:14px;
+    letter-spacing:.04em; font-weight:500;
+  }
+  .card .meaning{margin-top:10px; font-size:16px; color:var(--ink); text-align:center; max-width:34ch}
+  .card .meta{margin-top:14px; font-size:11.5px; color:var(--dim); text-transform:uppercase; letter-spacing:.09em}
+  .card .hint{
+    position:absolute; bottom:12px; left:0; right:0; text-align:center;
+    font-size:11.5px; color:var(--dim); letter-spacing:.04em;
+  }
+  .card .badge{
+    position:absolute; top:12px; left:14px; font-size:10.5px; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--dim);
+  }
+  .card .speak{
+    position:absolute; top:10px; right:10px; width:40px; height:40px; border-radius:50%;
+    border:1px solid var(--line); background:var(--panel-2); color:var(--muted);
+    font-size:16px; cursor:pointer; display:grid; place-items:center;
+  }
+  .card .speak:active{background:#332b28}
+
+  .grades{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+  .grades button{
+    padding:13px 6px; border-radius:12px; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); font-family:var(--ui); font-size:14px; cursor:pointer; display:flex;
+    flex-direction:column; gap:3px; align-items:center;
+  }
+  .grades button b{font-weight:600; font-size:14px}
+  .grades button span{font-size:10.5px; color:var(--dim)}
+  .grades button[data-g="0"]{border-color:#5a2b23}
+  .grades button[data-g="0"] b{color:var(--red-soft)}
+  .grades button[data-g="1"] b{color:var(--amber)}
+  .grades button[data-g="2"] b{color:var(--green)}
+  .grades[hidden]{display:none}
+
+  .bar{height:4px; border-radius:2px; background:var(--panel-2); overflow:hidden}
+  .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--red),var(--red-soft)); width:0%; transition:width .25s}
+  .row{display:flex; align-items:center; gap:10px; font-size:12.5px; color:var(--muted); flex-wrap:wrap}
+  .row .spacer{flex:1}
+
+  .btn{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--ink); border-radius:12px;
+    padding:11px 16px; font-size:14px; font-family:var(--ui); cursor:pointer;
+  }
+  .btn.primary{background:var(--red); border-color:var(--red); color:#fff; font-weight:600}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45; cursor:default}
+
+  /* ---------- choice / quiz ---------- */
+  .opts{display:grid; gap:8px}
+  .opt{
+    padding:14px 16px; border-radius:12px; border:1px solid var(--line); background:var(--panel);
+    color:var(--ink); font-size:17px; font-family:var(--ui); text-align:left; cursor:pointer;
+    display:flex; align-items:center; gap:12px;
+  }
+  .opt .k{font-size:11px; color:var(--dim); border:1px solid var(--line); border-radius:6px; padding:2px 6px; min-width:22px; text-align:center}
+  .opt .zh{font-family:var(--cjk); font-size:26px; letter-spacing:.04em}
+  .opt.right{border-color:var(--green); background:#1e2a1b}
+  .opt.wrong{border-color:var(--red); background:#2c1a17}
+  .opt:disabled{cursor:default; opacity:.85}
+
+  /* ---------- home / browse / stats ---------- */
+  .tiles{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .tile{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .tile .n{font-size:24px; font-weight:600}
+  .tile .l{font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.08em}
+  .start{display:flex; flex-direction:column; gap:8px; margin-top:2px}
+  .start .btn{width:100%; padding:15px}
+  .note{font-size:12.5px; color:var(--muted); line-height:1.55}
+  .note kbd{background:var(--panel-2); border:1px solid var(--line); border-radius:5px; padding:1px 5px; font-size:11px; font-family:var(--ui)}
+  .chips{display:flex; gap:6px; flex-wrap:wrap}
+  .chip{
+    border:1px solid var(--line); background:transparent; color:var(--muted); border-radius:999px;
+    padding:6px 11px; font-size:12px; cursor:pointer; font-family:var(--ui);
+  }
+  .chip[aria-pressed="true"]{background:var(--red); border-color:var(--red); color:#fff; font-weight:600}
+  input[type=search]{
+    width:100%; padding:11px 13px; border-radius:11px; border:1px solid var(--line);
+    background:var(--panel); color:var(--ink); font-size:15px; font-family:var(--ui);
+  }
+  .list{display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex:1; min-height:0; padding-bottom:8px}
+  .item{
+    display:flex; align-items:center; gap:12px; padding:10px 12px; background:var(--panel);
+    border:1px solid var(--line); border-radius:11px; cursor:pointer;
+  }
+  .item .zh{font-family:var(--cjk); font-size:26px; min-width:1.4em; text-align:center}
+  .item .p{color:var(--red-soft); font-size:14px; min-width:5.5em}
+  .item .m{color:var(--muted); font-size:13px; flex:1}
+  .item .b{font-size:10px; color:var(--dim); letter-spacing:.06em}
+  footer{padding:0 14px calc(10px + env(safe-area-inset-bottom)); text-align:center; font-size:11px; color:#4f4540}
+  .empty{color:var(--dim); font-size:13.5px; text-align:center; padding:28px 10px; line-height:1.6}
+  .toast{
+    position:fixed; left:50%; bottom:22px; transform:translate(-50%,20px); background:var(--panel-2);
+    border:1px solid var(--line); color:var(--ink); padding:10px 16px; border-radius:999px; font-size:13px;
+    opacity:0; transition:.22s; pointer-events:none; z-index:50; max-width:88vw; text-align:center;
+  }
+  .toast.show{opacity:1; transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="zh">汉字</span> · Pinyin Flashcards</h1>
+  <span class="sub" id="hdrStat"></span>
+</header>
+
+<nav>
+  <button data-view="home" aria-selected="true">Study</button>
+  <button data-view="quiz" aria-selected="false">Quiz</button>
+  <button data-view="browse" aria-selected="false">Browse</button>
+  <button data-view="stats" aria-selected="false">Progress</button>
+</nav>
+
+<main>
+  <!-- ============ HOME ============ -->
+  <section class="view active" id="view-home">
+    <div class="tiles">
+      <div class="tile"><span class="n" id="tDue">0</span><span class="l">Due now</span></div>
+      <div class="tile"><span class="n" id="tNew">0</span><span class="l">New cards</span></div>
+      <div class="tile"><span class="n" id="tKnown">0</span><span class="l">Learned</span></div>
+      <div class="tile"><span class="n" id="tAcc">–</span><span class="l">Accuracy</span></div>
+    </div>
+    <div class="chips" id="homeChips"></div>
+    <div class="start">
+      <button class="btn primary" id="startStudy">Start studying</button>
+      <button class="btn" id="startQuiz">Quiz me (multiple choice)</button>
+    </div>
+    <p class="note">
+      Tap the card to reveal pinyin and meaning, then grade yourself honestly —
+      <b>Again</b> resets the card, <b>Good</b> moves it up a box, <b>Easy</b> skips ahead.
+      Intervals grow as boxes go up, so cards you know stop coming back so often.
+      <br><br>
+      Keys: <kbd>space</kbd> flip · <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> grade · <kbd>s</kbd> speak · <kbd>esc</kbd> home.
+      Progress is saved in this browser.
+    </p>
+  </section>
+
+  <!-- ============ STUDY ============ -->
+  <section class="view" id="view-study">
+    <div class="row">
+      <span id="studyPos">–</span><div class="bar" style="flex:1"><i id="studyBar"></i></div>
+      <span id="studyLeft"></span>
+    </div>
+    <div class="stage">
+      <div class="card" id="studyCard" role="button" tabindex="0" aria-label="Flashcard, tap to flip">
+        <span class="badge" id="studyBadge"></span>
+        <button class="speak" id="studySpeak" title="Pronounce">🔊</button>
+        <div class="hanzi" id="studyHanzi">好</div>
+        <div class="pinyin" id="studyPinyin" hidden>hǎo</div>
+        <div class="meaning" id="studyMeaning" hidden></div>
+        <div class="meta" id="studyMeta" hidden></div>
+        <div class="hint" id="studyHint">tap to reveal</div>
+      </div>
+      <div class="grades" id="grades" hidden>
+        <button data-g="0"><b>Again</b><span>1</span></button>
+        <button data-g="1"><b>Good</b><span>2</span></button>
+        <button data-g="2"><b>Easy</b><span>3</span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ QUIZ ============ -->
+  <section class="view" id="view-quiz">
+    <div class="row">
+      <span id="quizPos">–</span><div class="bar" style="flex:1"><i id="quizBar"></i></div>
+      <span id="quizScore"></span>
+    </div>
+    <div class="stage">
+      <div class="card" id="quizCard" style="cursor:default">
+        <span class="badge" id="quizBadge">pinyin?</span>
+        <button class="speak" id="quizSpeak" title="Pronounce">🔊</button>
+        <div class="hanzi" id="quizHanzi">好</div>
+        <div class="meaning" id="quizPrompt" hidden></div>
+      </div>
+      <div class="opts" id="quizOpts"></div>
+    </div>
+  </section>
+
+  <!-- ============ BROWSE ============ -->
+  <section class="view" id="view-browse">
+    <input type="search" id="q" placeholder="Search character, pinyin, meaning…" autocomplete="off">
+    <div class="row"><span id="browseCount"></span><span class="spacer"></span><span class="note" style="font-size:11.5px">tap a row to hear it</span></div>
+    <div class="list" id="browseList"></div>
+  </section>
+
+  <!-- ============ PROGRESS ============ -->
+  <section class="view" id="view-stats">
+    <div class="tiles" id="statTiles"></div>
+    <div class="row"><b style="color:var(--ink);font-size:13px">Boxes</b><span class="note" style="font-size:11.5px">higher = better known</span></div>
+    <div id="boxChart" class="list" style="overflow:visible"></div>
+    <div class="row" style="gap:8px">
+      <button class="btn ghost" id="resetBtn">Reset progress</button>
+      <button class="btn ghost" id="exportBtn">Export JSON</button>
+    </div>
+    <p class="note" id="statsNote"></p>
+  </section>
+</main>
+
+<footer>汉字 flashcards · <span id="deckSize"></span> cards · offline, saved in this browser</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const DECK = /*__DECK__*/[];
+const CATS = /*__CATS__*/[];
+
+// ---------- storage ----------
+const KEY = 'hanzi-flashcards.v1';
+const BOX_MS = [0, 10*60e3, 24*3600e3, 3*24*3600e3, 7*24*3600e3, 21*24*3600e3, 60*24*3600e3];
+const BOX_LABEL = ['new','10 min','1 day','3 days','1 week','3 weeks','2 months'];
+
+const defaults = () => ({
+  cards: {},                 // id -> {box, due, seen, right, wrong}
+  cats: [],                  // active category filter ([] = all)
+  quizMode: 'pinyin',        // registered below
+  streak: {last:null, days:0},
+});
+let S = load();
+
+function load(){
+  try{
+    const raw = localStorage.getItem(KEY);
+    if(!raw) return defaults();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaults(), parsed);
+  }catch(e){ return defaults(); }
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){ toast('Could not save progress (storage blocked)'); }
+}
+
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const now = () => Date.now();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const byId = id => DECK.find(d => d.id === id);
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function rec(id){
+  if(!S.cards[id]) S.cards[id] = {box:0, due:0, seen:0, right:0, wrong:0};
+  return S.cards[id];
+}
+function activeDeck(){
+  if(!S.cats.length) return DECK;
+  return DECK.filter(d => S.cats.includes(d.t));
+}
+function counts(){
+  const deck = activeDeck(); const t = now();
+  let due=0, fresh=0, learned=0;
+  for(const d of deck){
+    const r = S.cards[d.id];
+    if(!r || !r.seen) fresh++;
+    else { learned++; if(r.due <= t) due++; }
+  }
+  return {due, fresh, learned, total: deck.length};
+}
+let toastTimer;
+function toast(msg){
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>el.classList.remove('show'), 2000);
+}
+
+// ---------- speech ----------
+let zhVoice = null;
+function pickVoice(){
+  if(!('speechSynthesis' in window)) return;
+  const vs = speechSynthesis.getVoices();
+  zhVoice = vs.find(v => /^zh(-|_)?(CN|Hans)?/i.test(v.lang)) ||
+            vs.find(v => /chinese|中文|普通话|普通話/i.test(v.name)) || null;
+}
+if('speechSynthesis' in window){
+  pickVoice();
+  speechSynthesis.addEventListener?.('voiceschanged', pickVoice);
+  setTimeout(pickVoice, 400);
+}
+function speak(text){
+  if(!('speechSynthesis' in window)){ toast('This browser has no speech synthesis'); return; }
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'zh-CN'; u.rate = 0.82;
+    if(zhVoice) u.voice = zhVoice;
+    speechSynthesis.speak(u);
+  }catch(e){ toast('Speech unavailable'); }
+}
+
+// ---------- navigation ----------
+function show(view){
+  $$('nav button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.view === view)));
+  $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
+  if(view === 'home') renderHome();
+  if(view === 'browse') renderBrowse();
+  if(view === 'stats') renderStats();
+  if(view === 'study' && !session.queue.length) startStudy();
+  if(view === 'quiz' && !quiz.items.length) startQuiz();
+}
+$$('nav button').forEach(b => b.onclick = () => show(b.dataset.view));
+
+// ---------- home ----------
+function renderHome(){
+  const c = counts();
+  $('#tDue').textContent = c.due;
+  $('#tNew').textContent = c.fresh;
+  $('#tKnown').textContent = c.learned;
+  const seen = Object.values(S.cards).filter(r => r.seen);
+  const right = seen.reduce((a,r)=>a+r.right,0), wrong = seen.reduce((a,r)=>a+r.wrong,0);
+  $('#tAcc').textContent = (right+wrong) ? Math.round(100*right/(right+wrong)) + '%' : '–';
+  $('#hdrStat').textContent = `${c.total} cards`;
+  const chips = $('#homeChips');
+  chips.innerHTML = '';
+  const all = document.createElement('button');
+  all.className = 'chip'; all.textContent = 'all';
+  all.setAttribute('aria-pressed', String(!S.cats.length));
+  all.onclick = () => { S.cats = []; save(); renderHome(); };
+  chips.appendChild(all);
+  for(const cat of CATS){
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = cat;
+    b.setAttribute('aria-pressed', String(S.cats.includes(cat)));
+    b.onclick = () => {
+      S.cats = S.cats.includes(cat) ? S.cats.filter(x=>x!==cat) : [...S.cats, cat];
+      save(); renderHome();
+    };
+    chips.appendChild(b);
+  }
+}
+$('#startStudy').onclick = () => { show('study'); startStudy(); };
+$('#startQuiz').onclick = () => { show('quiz'); startQuiz(); };
+
+// ---------- study (Leitner) ----------
+const session = {queue: [], i: 0, done: 0, total: 0, flipped: false, current: null};
+const SESSION_MAX = 20;
+
+function startStudy(){
+  const t = now();
+  const deck = activeDeck();
+  const due = deck.filter(d => { const r = S.cards[d.id]; return r && r.seen && r.due <= t; });
+  const fresh = deck.filter(d => !S.cards[d.id] || !S.cards[d.id].seen);
+  // due first (most overdue first), then new cards, capped
+  due.sort((a,b) => (S.cards[a.id].due - S.cards[b.id].due));
+  let queue = [...due, ...fresh].slice(0, SESSION_MAX);
+  if(!queue.length){
+    // nothing due: offer the soonest-scheduled cards instead of a dead end
+    const soon = deck.filter(d => S.cards[d.id] && S.cards[d.id].seen)
+                     .sort((a,b) => S.cards[a.id].due - S.cards[b.id].due).slice(0, 10);
+    if(soon.length){
+      queue = soon.map(d => d.id);
+      toast('Nothing due — reviewing the soonest cards');
+    }
+  }
+  session.queue = queue.map(d => d.id !== undefined ? d.id : d);
+  session.i = 0; session.done = 0; session.total = session.queue.length; session.flipped = false;
+  if(!session.queue.length){ renderStudyEmpty(); return; }
+  renderStudy();
+}
+
+function renderStudyEmpty(){
+  $('#studyPos').textContent = '—';
+  $('#studyBar').style.width = '0%';
+  $('#studyLeft').textContent = '';
+  $('#studyHanzi').textContent = '✓';
+  $('#studyHanzi').classList.add('small');
+  $('#studyPinyin').hidden = true; $('#studyMeaning').hidden = true; $('#studyMeta').hidden = true;
+  $('#studyHint').textContent = 'no cards selected';
+  $('#grades').hidden = true;
+  $('#studyBadge').textContent = '';
+}
+
+function renderStudy(){
+  if(session.i >= session.queue.length){ return renderStudyDone(); }
+  const d = byId(session.queue[session.i]);
+  session.current = d; session.flipped = false;
+  $('#studyHanzi').textContent = d.c;
+  $('#studyHanzi').classList.toggle('small', d.len > 1);
+  $('#studyPinyin').textContent = d.p;
+  $('#studyMeaning').textContent = d.m;
+  $('#studyMeta').textContent = d.t + ' · box ' + (S.cards[d.id] ? S.cards[d.id].box : 0);
+  $('#studyPinyin').hidden = true; $('#studyMeaning').hidden = true; $('#studyMeta').hidden = true;
+  $('#studyBadge').textContent = (S.cards[d.id] && S.cards[d.id].seen) ? 'review' : 'new';
+  $('#studyHint').textContent = 'tap to reveal';
+  $('#grades').hidden = true;
+  $('#studyPos').textContent = (session.done + 1) + ' / ' + session.total;
+  $('#studyBar').style.width = (100 * session.done / Math.max(1, session.total)) + '%';
+  const left = session.queue.length - session.i;
+  $('#studyLeft').textContent = left + ' left';
+}
+
+function flipStudy(){
+  if(!session.current || session.flipped) return;
+  session.flipped = true;
+  $('#studyPinyin').hidden = false;
+  $('#studyMeaning').hidden = false;
+  $('#studyMeta').hidden = false;
+  $('#studyHint').textContent = 'how well did you know it?';
+  $('#grades').hidden = false;
+}
+
+function gradeStudy(g){
+  if(!session.flipped || !session.current) return;
+  const d = session.current, r = rec(d.id);
+  r.seen++;
+  if(g === 0){ r.wrong++; r.box = 0; r.due = now(); }
+  else { r.right++; r.box = Math.min(6, r.box + (g === 2 ? 2 : 1)); r.due = now() + BOX_MS[r.box]; }
+  save();
+  if(g === 0) session.queue.push(d.id);       // come back this session
+  session.done++;
+  session.i++;
+  renderStudy();
+}
+
+function renderStudyDone(){
+  const c = counts();
+  $('#studyPos').textContent = 'done';
+  $('#studyBar').style.width = '100%';
+  $('#studyLeft').textContent = '';
+  $('#studyHanzi').textContent = '好';
+  $('#studyHanzi').classList.add('small');
+  $('#studyPinyin').hidden = false;
+  $('#studyPinyin').textContent = 'hǎo';
+  $('#studyMeaning').hidden = false;
+  $('#studyMeaning').textContent = 'good — session complete';
+  $('#studyMeta').hidden = true;
+  $('#studyBadge').textContent = '';
+  $('#studyHint').textContent = `${c.due} due now · ${c.learned}/${c.total} learned`;
+  $('#grades').hidden = true;
+  session.current = null;
+}
+
+$('#studyCard').onclick = e => { if(e.target.closest('.speak')) return; flipStudy(); };
+$('#studyCard').onkeydown = e => { if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); flipStudy(); } };
+$('#studySpeak').onclick = e => { e.stopPropagation(); if(session.current) speak(session.current.c); };
+$$('#grades button').forEach(b => b.onclick = () => gradeStudy(+b.dataset.g));
+
+// ---------- quiz ----------
+const QUIZ_MODES = {pinyin: 'character → pinyin', meaning: 'character → meaning', hanzi: 'pinyin → character'};
+const quiz = {items: [], i: 0, score: 0, answered: false, mode: 'pinyin'};
+
+function startQuiz(){
+  let pool = activeDeck().filter(d => d.len === 1);
+  if(pool.length < 8) pool = activeDeck();
+  if(!pool.length){ toast('No cards in this selection'); return; }
+  // prefer cards already introduced, then fill with new ones
+  const seen = pool.filter(d => S.cards[d.id] && S.cards[d.id].seen);
+  const fresh = pool.filter(d => !(S.cards[d.id] && S.cards[d.id].seen));
+  const picks = shuffle([...shuffle([...seen]), ...shuffle([...fresh])]).slice(0, 10);
+  quiz.items = picks.map(d => makeQuestion(d, pool));
+  quiz.i = 0; quiz.score = 0; quiz.answered = false; quiz.mode = S.quizMode || 'pinyin';
+  renderQuiz();
+}
+
+function makeQuestion(d, pool){
+  const modes = Object.keys(QUIZ_MODES);
+  const mode = modes[Math.floor(Math.random()*modes.length)];
+  const field = mode === 'hanzi' ? 'c' : mode === 'meaning' ? 'm' : 'p';
+  const opts = new Set([d[field]]);
+  const near = shuffle(pool.filter(x => x.id !== d.id));
+  for(const x of near){ if(opts.size >= 4) break; opts.add(x[field]); }
+  return {d, mode, answer: d[field], opts: shuffle([...opts])};
+}
+
+function renderQuiz(){
+  if(quiz.i >= quiz.items.length) return renderQuizDone();
+  const q = quiz.items[quiz.i];
+  quiz.answered = false;
+  const promptField = q.mode === 'hanzi' ? 'p' : 'c';
+  $('#quizHanzi').textContent = q.d[promptField];
+  $('#quizHanzi').classList.toggle('small', q.mode === 'hanzi');
+  $('#quizBadge').textContent = q.mode === 'hanzi' ? 'which character?' :
+                                q.mode === 'meaning' ? 'what does it mean?' : 'which pinyin?';
+  $('#quizPrompt').hidden = true;
+  $('#quizPos').textContent = (quiz.i + 1) + ' / ' + quiz.items.length;
+  $('#quizBar').style.width = (100 * quiz.i / quiz.items.length) + '%';
+  $('#quizScore').textContent = quiz.score + ' correct';
+  const box = $('#quizOpts'); box.innerHTML = '';
+  q.opts.forEach((opt, idx) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = `<span class="k">${idx+1}</span>` +
+      (q.mode === 'hanzi' ? `<span class="zh">${esc(opt)}</span>` : `<span>${esc(opt)}</span>`);
+    b.onclick = () => answerQuiz(b, opt);
+    box.appendChild(b);
+  });
+}
+
+function answerQuiz(btn, opt){
+  if(quiz.answered) return;
+  quiz.answered = true;
+  const q = quiz.items[quiz.i];
+  const correct = opt === q.answer;
+  const r = rec(q.d.id);
+  r.seen++;
+  if(correct){ quiz.score++; r.right++; r.box = Math.min(6, r.box + 1); r.due = now() + BOX_MS[r.box]; }
+  else { r.wrong++; r.box = 0; r.due = now(); }
+  save();
+  $('#quizScore').textContent = quiz.score + ' correct';
+  $$('#quizOpts .opt').forEach(b => {
+    b.disabled = true;
+    const label = b.textContent.replace(/^\d\s*/, '').trim();
+    if(label === q.answer) b.classList.add('right');
+    else if(b === btn) b.classList.add('wrong');
+  });
+  if(q.mode !== 'hanzi') $('#quizPrompt').hidden = false;
+  $('#quizPrompt').textContent = `${q.d.c} · ${q.d.p} · ${q.d.m}`;
+  $('#quizPrompt').hidden = false;
+  speakIfOn(q.d.c);
+  const wasCorrect = correct;
+  setTimeout(() => {
+    quiz.i++;
+    renderQuiz();
+    if(!wasCorrect) { /* stays in queue via next quiz round */ }
+  }, wasCorrect ? 700 : 1500);
+}
+
+function speakIfOn(){ /* audio is explicit only — avoids noise on every answer */ }
+
+function renderQuizDone(){
+  $('#quizPos').textContent = 'done';
+  $('#quizBar').style.width = '100%';
+  $('#quizScore').textContent = quiz.score + ' correct';
+  $('#quizHanzi').textContent = '✓';
+  $('#quizHanzi').classList.add('small');
+  $('#quizBadge').textContent = 'quiz complete';
+  $('#quizOpts').innerHTML = `<div class="empty">${quiz.score} / ${quiz.items.length} correct.
+    <br><br><button class="btn primary" id="quizAgain">Another round</button></div>`;
+  const b = $('#quizAgain'); if(b) b.onclick = startQuiz;
+}
+$('#quizSpeak').onclick = e => { e.stopPropagation(); if(quiz.items[quiz.i]) speak(quiz.items[quiz.i].d.c); };
+
+// ---------- browse ----------
+function renderBrowse(){
+  $('#deckSize').textContent = DECK.length;
+  const q = ($('#q').value || '').trim().toLowerCase();
+  // ignore tone marks and spaces when searching: "pengyou" finds "péng you"
+  const strip = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+  const qn = strip(q);
+  const rows = DECK.filter(d => {
+    if(!q) return true;
+    const hay = (d.c + ' ' + d.p + ' ' + d.n + ' ' + d.m + ' ' + d.t).toLowerCase();
+    return hay.includes(q) || strip(hay).includes(qn);
+  });
+  $('#browseCount').textContent = rows.length + ' of ' + DECK.length;
+  const list = $('#browseList'); list.innerHTML = '';
+  for(const d of rows){
+    const r = S.cards[d.id];
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `<span class="zh">${esc(d.c)}</span><span class="p">${esc(d.p)}</span>
+      <span class="m">${esc(d.m)}</span><span class="b">${r && r.seen ? 'box ' + r.box : 'new'}</span>`;
+    el.onclick = () => speak(d.c);
+    list.appendChild(el);
+  }
+  if(!rows.length) list.innerHTML = '<div class="empty">Nothing matches that.</div>';
+}
+$('#q').oninput = renderBrowse;
+
+// ---------- stats ----------
+function renderStats(){
+  const c = counts();
+  const vals = Object.values(S.cards).filter(r => r.seen);
+  const right = vals.reduce((a,r)=>a+r.right,0), wrong = vals.reduce((a,r)=>a+r.wrong,0);
+  const boxCounts = [0,0,0,0,0,0,0];
+  for(const r of vals) boxCounts[r.box] = (boxCounts[r.box]||0) + 1;
+  $('#statTiles').innerHTML = `
+    <div class="tile"><span class="n">${c.learned}</span><span class="l">learned</span></div>
+    <div class="tile"><span class="n">${c.total - c.learned}</span><span class="l">untouched</span></div>
+    <div class="tile"><span class="n">${right + wrong ? Math.round(100*right/(right+wrong)) + '%' : '–'}</span><span class="l">accuracy</span></div>
+    <div class="tile"><span class="n">${right + wrong}</span><span class="l">reviews</span></div>`;
+  const max = Math.max(1, ...boxCounts);
+  $('#boxChart').innerHTML = boxCounts.map((n,i) => `
+    <div class="row" style="gap:10px">
+      <span style="width:70px;color:var(--muted);font-size:12px">${BOX_LABEL[i]}</span>
+      <div class="bar" style="flex:1"><i style="width:${100*n/max}%;background:${i>=4?'var(--green)':'var(--red)'}"></i></div>
+      <span style="width:26px;text-align:right;font-size:12px">${n}</span>
+    </div>`).join('');
+  $('#statsNote').textContent = 'Interval per box: ' + BOX_LABEL.slice(1).join(' → ') + '.';
+}
+$('#resetBtn').onclick = () => {
+  if(confirm('Erase all flashcard progress in this browser?')){
+    S.cards = {}; save(); renderStats(); renderHome(); toast('Progress reset');
+  }
+};
+$('#exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'hanzi-progress.json';
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+};
+
+// ---------- keyboard ----------
+document.addEventListener('keydown', e => {
+  if(e.target.matches('input, textarea')) return;
+  const inStudy = $('#view-study').classList.contains('active');
+  const inQuiz = $('#view-quiz').classList.contains('active');
+  if(e.key === 'Escape'){ show('home'); return; }
+  if(inStudy){
+    if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); session.flipped ? gradeStudy(1) : flipStudy(); }
+    else if(session.flipped && ['1','2','3'].includes(e.key)) gradeStudy(+e.key - 1);
+    else if(e.key.toLowerCase() === 's' && session.current) speak(session.current.c);
+  } else if(inQuiz){
+    if(['1','2','3','4'].includes(e.key)){
+      const b = $$('#quizOpts .opt')[+e.key - 1]; if(b && !b.disabled) b.click();
+    } else if(e.key.toLowerCase() === 's' && quiz.items[quiz.i]) speak(quiz.items[quiz.i].d.c);
+  }
+});
+
+// ---------- boot ----------
+$('#deckSize').textContent = DECK.length;
+renderHome();
+</script>
+</body>
+</html>
