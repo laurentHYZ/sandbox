@@ -6,13 +6,22 @@ deck inlined and progress lives in the browser's localStorage.
 
 ## Use it
 
-Tailnet only (phone + desktop, both already on the tailnet):
+Public, no login — this is the easiest link for a phone or a shared computer:
+
+```
+https://laurenthyz.github.io/sandbox/
+```
+
+Tailnet only (same build, served from the VPS):
 
 ```
 https://vps-c281b2f4.tailfefed3.ts.net/hanzi/
 ```
 
 Or open `index.html` locally from any machine — it works offline as a `file://` page.
+
+The repo is public because GitHub Pages on a free plan requires it; the tailnet copy
+exists so the app keeps working even if the repo goes private again.
 
 ## What it does
 
@@ -62,6 +71,11 @@ pinyin and pypinyin disagree; fix the pinyin or, if it is a word-level neutral t
 add the word to `WORD_LEVEL_NEUTRAL` in `build_app.py`.
 
 ## Serving
+
+GitHub Pages builds `main` at the repo root on every push: Settings → Pages → deployed
+from `main` / (root). A push takes about a minute to go live.
+
+The VPS copy:
 
 | Piece | What |
 |---|---|
